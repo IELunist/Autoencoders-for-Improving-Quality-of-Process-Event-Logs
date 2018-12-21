@@ -68,7 +68,7 @@ parser = {
     'model_name': '',
     'data_dir': '../data/',
     'data_file': name + '.csv',
-    'nan_pct': 0.3,
+    'nan_pct': 0.5,
     'input_dir': '../input/{}/'.format(name),
     'batch_size' : 16,
     'epochs' : 200,
@@ -77,7 +77,7 @@ parser = {
     'layer1': 300,
     'layer2': 100,
     'lr': 0.0005,
-    'betas': (0.9, 0.999),
+    'betas': (0.9, 0.999),   
     'lr_decay': 0.90,
 }
 
@@ -149,14 +149,14 @@ with open(file_name, 'rb') as f:
 # In[11]:
 
 
-complete_matrix_w_normalized_time_trainLoader = torch.utils.data.DataLoader(complete_matrix_w_normalized_time,
-                                                                            batch_size=args.batch_size, shuffle=False,
+complete_matrix_w_normalized_time_trainLoader = torch.utils.data.DataLoader(complete_matrix_w_normalized_time, 
+                                                                            batch_size=args.batch_size, shuffle=False, 
                                                                             num_workers=2)
-missing_matrix_w_normalized_time_trainLoader = torch.utils.data.DataLoader(missing_matrix_w_normalized_time,
-                                                                           batch_size=args.batch_size, shuffle=False,
+missing_matrix_w_normalized_time_trainLoader = torch.utils.data.DataLoader(missing_matrix_w_normalized_time, 
+                                                                           batch_size=args.batch_size, shuffle=False, 
                                                                            num_workers=2)
-avai_matrix_trainLoader = torch.utils.data.DataLoader(avai_matrix,
-                                                      batch_size=args.batch_size, shuffle=False,
+avai_matrix_trainLoader = torch.utils.data.DataLoader(avai_matrix, 
+                                                      batch_size=args.batch_size, shuffle=False, 
                                                       num_workers=2)
 
 
@@ -210,7 +210,7 @@ complete_matrix_w_normalized_time.shape
 
 if args.model_class == 'AE':
     model = AE(complete_matrix_w_normalized_time.shape, args.layer1, args.layer2)
-
+        
 if args.cuda:
     model.cuda()
 
@@ -224,7 +224,7 @@ if args.cuda:
 
 def loss_function(recon_x, x, avai_mask):
     #MSE = F.mse_loss(recon_x*avai_mask, x*avai_mask, size_average=False)
-    BCE = F.binary_cross_entropy(recon_x, x, weight=avai_mask, size_average=False)
+    BCE = F.binary_cross_entropy(recon_x, x, weight=avai_mask, size_average=False) 
     return BCE
 
 
@@ -275,7 +275,7 @@ def load_model(model, model_name):
 def train(epoch, model, optimizer):
     model.train()
     train_loss = 0
-    for batch_idx, (m_data, c_data, avai_mask) in enumerate(zip(missing_matrix_w_normalized_time_trainLoader,
+    for batch_idx, (m_data, c_data, avai_mask) in enumerate(zip(missing_matrix_w_normalized_time_trainLoader, 
                                                                 complete_matrix_w_normalized_time_trainLoader,
                                                                 avai_matrix_trainLoader)):
         c_data = Variable(c_data.float())
@@ -287,17 +287,17 @@ def train(epoch, model, optimizer):
             m_data = m_data.cuda()
             avai_mask = avai_mask.cuda()
 
-
+            
         optimizer.zero_grad()
-
+        
         recon_data = model(m_data)
-
+        
         loss = loss_function(recon_data, c_data, avai_mask)
-
+        
         loss.backward()
         train_loss += loss.data[0]
         optimizer.step()
-
+        
     return train_loss / len(complete_matrix_w_normalized_time_trainLoader.dataset)
 
 
@@ -307,11 +307,11 @@ def train(epoch, model, optimizer):
 if args.train:
     for epoch in range(1, args.epochs + 1):
         init = time.time()
-
+        
         #method 1 scheduler
         scheduler.step()
         train_loss = train(epoch, model, optimizer)
-
+        
         end = time.time()
         print('====> Epoch {} | End time: {:.4f} ms | Train loss: {:.4f}'.
               format(epoch, (end-init)*1000, train_loss))
@@ -327,28 +327,28 @@ else:
 if args.test:
     m_test = missing_matrix_w_normalized_time
     m_test = Variable(torch.Tensor(m_test).float())
-
+    
     if args.cuda:
         m_test = m_test.cuda()
-
+    
     print('Predicting...')
     recon_test = model(m_test)
-
+    
     print('\n')
     print('Converting to dataframe...')
     recon_df_w_normalized_time = convert2df(recon_test, pad_matrix, cols_w_normalized_time, row_num)
-
+    
     print('Transforming Normalized Time to Time...')
     recon_df_w_time = getDfWithTime(recon_df_w_normalized_time, missing_true_test, min_max_storage)
-
+    
     print('Getting submission...')
     submission_df = getSubmission(recon_df_w_time, missing_true_test, complete_true_test, first_timestamp)
     submission = fixTime(submission_df)
-
+    
     print('Testing...')
     mae_time, rmse_time, acc = evaluation(submission, nan_time_index, nan_activity_index, show=True)
     print('\n')
-
+    
     print('Saving submission...')
     submission_df.to_csv(args.output_dir+'submission.csv', index=False)
     print('Done!')
@@ -357,16 +357,17 @@ if args.test:
 # In[27]:
 
 
-print(submission_df.shape)
+submission_df.shape
 
 
 # In[28]:
 
 
-print(submission.head(10))
+submission.head(10)
 
 
 # In[29]:
 
 
-print(missing_true_test.head(10))
+missing_true_test.head(10)
+

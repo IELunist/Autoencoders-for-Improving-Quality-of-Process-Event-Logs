@@ -33,368 +33,362 @@ pd.options.mode.chained_assignment = None #to run loop quicker without warnings
 
 
 #name = 'bpi_2012'
-name = 'bpi_2013'
-#name = 'small_log'
+#name = 'bpi_2013'
+name = 'small_log'
 #name = 'large_log'
 
 '''
 nan_pct : 0.3, 0.35, 0.4, 0.5
 '''
-n_pct = [0.5]#,0.5]
-for k in n_pct:
-    print('Non_pct : %s'%(str(k)))
-    args = {
-        'data_dir': '../data/',
-        'data_file': name + '.csv',
-        'input_dir': '../input/{}/'.format(name),
-        'nan_pct': k,
-        'train_pct': 0.6,
-        'val_pct': 0.2,
-    }
-    start_time = time.time()
-    args = argparse.Namespace(**args)
-    for count in range(9,10):
-        print('\n')
-        print('Version : %s'%(count))
 
-        # In[4]:
+args = {
+    'data_dir': '../data/',
+    'data_file': name + '.csv',
+    'input_dir': '../input/{}/'.format(name),
+    'nan_pct': 0.3,
+    'train_pct': 0.6,
+    'val_pct': 0.2,
+}
 
-        if not os.path.isdir('../input/'):
-            os.makedirs('../input/')
+args = argparse.Namespace(**args)
 
-        if not os.path.isdir(args.input_dir):
-            os.makedirs(args.input_dir)
 
+# In[4]:
 
-        # In[5]:
 
+if not os.path.isdir('../input/'):
+    os.makedirs('../input/')
 
-        sys.path.insert(0, './../utils/')
-        from utils import *
+if not os.path.isdir(args.input_dir):
+    os.makedirs(args.input_dir)
 
 
-        # # Load data
+# In[5]:
 
-        # In[6]:
 
+sys.path.insert(0, './../utils/')
+from utils import *
 
-        # Only consider Case, Activity, Timestamp
-        cols = ['CaseID', 'Activity', 'CompleteTimestamp']
 
-        # For Timestamp: Convert to time
-        if name == 'helpdesk':
-            data = pd.read_csv(args.data_dir + args.data_file)
-        else:
-            data = pd.read_csv(args.data_dir + args.data_file, usecols=['Case ID', 'Activity', 'Complete Timestamp'])
-            data['Case ID'] = data['Case ID'].apply(lambda x: x.split(' ')[1])
+# # Load data
 
+# In[6]:
 
-        # Format for each column
-        data.columns = cols
-        data['CompleteTimestamp'] = pd.to_datetime(data['CompleteTimestamp'], errors='coerce')
-        data['CaseID'] = data['CaseID'].apply(pd.to_numeric)
-        data['Activity'] = data['Activity'].apply(str)
 
+# Only consider Case, Activity, Timestamp
+cols = ['CaseID', 'Activity', 'CompleteTimestamp']
 
-        # In[7]:
+# For Timestamp: Convert to time
+if name == 'helpdesk':
+    data = pd.read_csv(args.data_dir + args.data_file)
+else:
+    data = pd.read_csv(args.data_dir + args.data_file, usecols=['Case ID', 'Activity', 'Complete Timestamp'])
+    data['Case ID'] = data['Case ID'].apply(lambda x: x.split(' ')[1])
 
 
-        data.head()
+# Format for each column
+data.columns = cols
+data['CompleteTimestamp'] = pd.to_datetime(data['CompleteTimestamp'], errors='coerce')
+data['CaseID'] = data['CaseID'].apply(pd.to_numeric)
+data['Activity'] = data['Activity'].apply(str)
 
 
-        # # Explore data
+# In[7]:
 
-        # In[8]:
 
+data.head()
 
-        print('There are: {} cases'.format(len(data['CaseID'].unique())))
-        print('There are: {} activities'.format(len(data['Activity'].unique())))
 
+# # Explore data
 
-        # In[9]:
+# In[8]:
 
 
-        print('-----Frequency of different activities-----')
-        print(data['Activity'].value_counts())
+print('There are: {} cases'.format(len(data['CaseID'].unique())))
+print('There are: {} activities'.format(len(data['Activity'].unique())))
 
 
-        # # Induce missing data
+# In[9]:
 
-        # **To do:**
-        # - nan_pct: percentage of nan values
-        # - Induce missingness: 30% data
 
-        # In[10]:
+print('-----Frequency of different activities-----')
+print(data['Activity'].value_counts())
 
 
-        data.shape
+# # Induce missing data
 
+# **To do:**
+# - nan_pct: percentage of nan values
+# - Induce missingness: 30% data
 
-        # In[11]:
+# In[10]:
 
 
-        total_NA = int(data.shape[0]*(data.shape[1]-1)*args.nan_pct)
-        print('Number of missing values: {}'.format(total_NA))
+data.shape
 
 
-        # In[12]:
+# In[11]:
 
 
-        # introduce missing Activities and Timestamps
-        missing_data = data.copy()
-        i = 0
-        while i < total_NA:
-            row = np.random.randint(1, data.shape[0]) #exclude first row
-            col = np.random.randint(1, data.shape[1]) #exclude CaseID
-            if not pd.isnull(missing_data.iloc[row, col]):
-                missing_data.iloc[row, col] = np.nan
-                i+=1
+total_NA = int(data.shape[0]*(data.shape[1]-1)*args.nan_pct)
+print('Number of missing values: {}'.format(total_NA))
 
 
-        # In[13]:
+# In[12]:
 
 
-        print('-----Frequency of different activities-----')
-        print(missing_data['Activity'].value_counts())
+# introduce missing Activities and Timestamps
+missing_data = data.copy()
+i = 0
+while i < total_NA:
+    row = np.random.randint(1, data.shape[0]) #exclude first row
+    col = np.random.randint(1, data.shape[1]) #exclude CaseID
+    if not pd.isnull(missing_data.iloc[row, col]):
+        missing_data.iloc[row, col] = np.nan
+        i+=1
 
 
-        # In[14]:
+# In[13]:
 
 
-        most_frequent_activity = missing_data['Activity'].value_counts().index[0]
-        print('Most frequent activity is: {}'.format(most_frequent_activity))
+print('-----Frequency of different activities-----')
+print(missing_data['Activity'].value_counts())
 
 
-        # In[15]:
+# In[14]:
 
 
-        first_timestamp = missing_data['CompleteTimestamp'][0]
+most_frequent_activity = missing_data['Activity'].value_counts().index[0]
+print('Most frequent activity is: {}'.format(most_frequent_activity))
 
 
-        # # Compute CumTimeInverval
+# In[15]:
 
-        # In[16]:
 
+first_timestamp = missing_data['CompleteTimestamp'][0]
 
-        missing_df = calculateCumTimeInterval(missing_data)
-        missing_df['CumTimeInterval'] = missing_df['CumTimeInterval'].apply(convert2seconds)
 
+# # Compute CumTimeInverval
 
-        # In[17]:
+# In[16]:
 
 
-        missing_df.head()
+missing_df = calculateCumTimeInterval(missing_data)
+missing_df['CumTimeInterval'] = missing_df['CumTimeInterval'].apply(convert2seconds)
 
 
-        # # Split df to train/val/test
+# In[17]:
 
-        # In[18]:
 
+missing_df.head()
 
-        df = calculateCumTimeInterval(data)
-        df['CumTimeInterval'] = df['CumTimeInterval'].apply(convert2seconds)
 
+# # Split df to train/val/test
 
-        # In[19]:
+# In[18]:
 
 
-        df.head()
+df = calculateCumTimeInterval(data)
+df['CumTimeInterval'] = df['CumTimeInterval'].apply(convert2seconds)
 
 
-        # In[20]:
+# In[19]:
 
 
-        groupByCase = df.groupby(['CaseID'])
-        missing_groupByCase = missing_df.groupby(['CaseID'])
+df.head()
 
-        # Split: 70% train, 10% validate, 20% test
-        train_size = int(len(groupByCase)*args.train_pct)
-        val_size = int(len(groupByCase)*args.val_pct)
-        test_size = len(groupByCase) - train_size - val_size
 
+# In[20]:
 
-        # In[21]:
 
+groupByCase = df.groupby(['CaseID'])
+missing_groupByCase = missing_df.groupby(['CaseID'])
 
-        df.shape
+# Split: 70% train, 10% validate, 20% test
+train_size = int(len(groupByCase)*args.train_pct)
+val_size = int(len(groupByCase)*args.val_pct)
+test_size = len(groupByCase) - train_size - val_size
 
 
-        # In[22]:
+# In[21]:
 
 
-        df_train = pd.DataFrame(columns=list(df))
-        df_val = pd.DataFrame(columns=list(df))
-        df_test = pd.DataFrame(columns=list(df))
+df.shape
 
-        for caseid, data_case in groupByCase:
-            if caseid <= train_size:
-                df_train = df_train.append(data_case)
-            elif train_size < caseid <= (train_size+val_size):
-                df_val = df_val.append(data_case)
-            else:
-                df_test = df_test.append(data_case)
 
+# In[22]:
 
-        # In[23]:
 
+df_train = pd.DataFrame(columns=list(df))
+df_val = pd.DataFrame(columns=list(df))
+df_test = pd.DataFrame(columns=list(df))
 
-        df.shape[0] == df_train.shape[0] + df_val.shape[0] + df_test.shape[0]
+for caseid, data_case in groupByCase:
+    if caseid <= train_size:
+        df_train = df_train.append(data_case)
+    elif train_size < caseid <= (train_size+val_size):
+        df_val = df_val.append(data_case)
+    else:
+        df_test = df_test.append(data_case)
 
 
-        # In[24]:
+# In[23]:
 
 
-        missing_df_train = pd.DataFrame(columns=list(missing_df))
-        missing_df_val = pd.DataFrame(columns=list(missing_df))
-        missing_df_test = pd.DataFrame(columns=list(missing_df))
+df.shape[0] == df_train.shape[0] + df_val.shape[0] + df_test.shape[0]
 
-        #Note: case start from 1 not 0
-        for caseid, data_case in missing_groupByCase:
-            if caseid <= train_size:
-                missing_df_train = missing_df_train.append(data_case)
-            elif train_size < caseid <= train_size+val_size:
-                missing_df_val = missing_df_val.append(data_case)
-            else:
-                missing_df_test = missing_df_test.append(data_case)
 
+# In[24]:
 
-        # In[25]:
 
+missing_df_train = pd.DataFrame(columns=list(missing_df))
+missing_df_val = pd.DataFrame(columns=list(missing_df))
+missing_df_test = pd.DataFrame(columns=list(missing_df))
 
-        missing_df.shape[0] == missing_df_train.shape[0] + missing_df_val.shape[0] + missing_df_test.shape[0]
+#Note: case start from 1 not 0
+for caseid, data_case in missing_groupByCase:
+    if caseid <= train_size:
+        missing_df_train = missing_df_train.append(data_case)
+    elif train_size < caseid <= train_size+val_size:
+        missing_df_val = missing_df_val.append(data_case)
+    else:
+        missing_df_test = missing_df_test.append(data_case)
 
 
-        # In[26]:
+# In[25]:
 
 
-        len(df_train.groupby(['CaseID'])), len(df_val.groupby(['CaseID'])), len(df_test.groupby(['CaseID']))
+missing_df.shape[0] == missing_df_train.shape[0] + missing_df_val.shape[0] + missing_df_test.shape[0]
 
 
-        # In[27]:
+# In[26]:
 
 
-        train_size, val_size, test_size
+len(df_train.groupby(['CaseID'])), len(df_val.groupby(['CaseID'])), len(df_test.groupby(['CaseID']))
 
 
-        # In[28]:
+# In[27]:
 
 
-        len(missing_df_train.groupby(['CaseID'])), len(missing_df_val.groupby(['CaseID'])), len(missing_df_test.groupby(['CaseID']))
+train_size, val_size, test_size
 
 
-        # In[29]:
+# In[28]:
 
 
-        #get number of rows
-        print(df_train.shape, df_val.shape, df_test.shape)
-        train_row_num = df_train.shape[0]
-        val_row_num = df_val.shape[0]
-        test_row_num = df_test.shape[0]
+len(missing_df_train.groupby(['CaseID'])), len(missing_df_val.groupby(['CaseID'])), len(missing_df_test.groupby(['CaseID']))
 
 
-        # In[30]:
+# In[29]:
 
 
-        missing_df_test.head()
+#get number of rows
+print(df_train.shape, df_val.shape, df_test.shape)
+train_row_num = df_train.shape[0]
+val_row_num = df_val.shape[0]
+test_row_num = df_test.shape[0]
 
 
-        # In[31]:
+# In[30]:
 
 
-        avai_instance = 0
-        for row in range(len(missing_df_test)):
-            if not pd.isnull(missing_df_test['CumTimeInterval'].iloc[row]) and not pd.isnull(missing_df_test['Activity'].iloc[row]):
-                avai_instance+=1
+missing_df_test.head()
 
-        print('Number of available row: {}'.format(avai_instance))
 
+# In[31]:
 
-        # In[32]:
 
+avai_instance = 0
+for row in range(len(missing_df_test)):
+    if not pd.isnull(missing_df_test['CumTimeInterval'].iloc[row]) and not pd.isnull(missing_df_test['Activity'].iloc[row]):
+        avai_instance+=1
 
-        nan_instance = 0
-        for row in range(len(missing_df_test)):
-            if pd.isnull(missing_df_test['CumTimeInterval'].iloc[row]) or pd.isnull(missing_df_test['Activity'].iloc[row]):
-                nan_instance+=1
+print('Number of available row: {}'.format(avai_instance))
 
-        print('Number of nan row: {}'.format(nan_instance))
 
+# In[32]:
 
-        # In[33]:
 
+nan_instance = 0
+for row in range(len(missing_df_test)):
+    if pd.isnull(missing_df_test['CumTimeInterval'].iloc[row]) or pd.isnull(missing_df_test['Activity'].iloc[row]):
+        nan_instance+=1
 
-        missing_df_test.shape[0] == avai_instance + nan_instance
+print('Number of nan row: {}'.format(nan_instance))
 
 
-        # # Save df
+# In[33]:
 
-        # In[34]:
 
+missing_df_test.shape[0] == avai_instance + nan_instance
 
-        df_name = os.path.join(args.input_dir, 'complete_df_full_{0}.csv'.format(args.nan_pct))
-        df.to_csv(df_name, index=False)
 
-        missing_df_name = os.path.join(args.input_dir, 'missing_df_full_{0}_ver{1}.csv'.format(args.nan_pct,count))
-        missing_df.to_csv(missing_df_name, index=False)
+# # Save df
 
+# In[34]:
 
-        # In[35]:
 
+df_name = os.path.join(args.input_dir, 'complete_df_full_{}.csv'.format(args.nan_pct))
+df.to_csv(df_name, index=False)
 
-        #df_train.to_csv(args.input_dir+'complete_df_train.csv', index=False)
-        #df_val.to_csv(args.input_dir+'complete_df_val.csv', index=False)
-        #df_test.to_csv(args.input_dir+'complete_df_test.csv', index=False)
+missing_df_name = os.path.join(args.input_dir, 'missing_df_full_{}.csv'.format(args.nan_pct))
+missing_df.to_csv(missing_df_name, index=False)
 
 
-        # In[36]:
+# In[35]:
 
 
-        #missing_df_train.to_csv(args.input_dir+'missing_df_train.csv', index=False)
-        #missing_df_val.to_csv(args.input_dir+'missing_df_val.csv', index=False)
-        #missing_df_test.to_csv(args.input_dir+'missing_df_test.csv', index=False)
+#df_train.to_csv(args.input_dir+'complete_df_train.csv', index=False)
+#df_val.to_csv(args.input_dir+'complete_df_val.csv', index=False)
+#df_test.to_csv(args.input_dir+'complete_df_test.csv', index=False)
 
 
-        # In[37]:
+# In[36]:
 
 
-        pd.isnull(missing_df).sum()
+#missing_df_train.to_csv(args.input_dir+'missing_df_train.csv', index=False)
+#missing_df_val.to_csv(args.input_dir+'missing_df_val.csv', index=False)
+#missing_df_test.to_csv(args.input_dir+'missing_df_test.csv', index=False)
 
 
-        # In[38]:
+# In[37]:
 
 
-        pd.isnull(missing_df_train).sum()
+pd.isnull(missing_df).sum()
 
 
-        # In[39]:
+# In[38]:
 
 
-        pd.isnull(missing_df_val).sum()
+pd.isnull(missing_df_train).sum()
 
 
-        # In[40]:
+# In[39]:
 
 
-        pd.isnull(missing_df_test).sum()
+pd.isnull(missing_df_val).sum()
 
 
-        # # Save parameters
+# In[40]:
 
-        # In[41]:
 
+pd.isnull(missing_df_test).sum()
 
-        file_name = os.path.join(args.input_dir, 'parameters_{0}_ver{1}.pkl'.format(args.nan_pct,count))
-        with open(file_name, 'wb') as f:
-            pickle.dump(most_frequent_activity, f, protocol=2)
-            pickle.dump(first_timestamp, f, protocol=2)
-            pickle.dump(avai_instance, f, protocol=2)
-            pickle.dump(nan_instance, f, protocol=2)
-            pickle.dump(train_size, f, protocol=2)
-            pickle.dump(val_size, f, protocol=2)
-            pickle.dump(test_size, f, protocol=2)
-            pickle.dump(train_row_num, f, protocol=2)
-            pickle.dump(val_row_num, f, protocol=2)
-            pickle.dump(test_row_num, f, protocol=2)
 
-    end_time = time.time()
-    print(end_time-start_time)
+# # Save parameters
+
+# In[41]:
+
+
+file_name = os.path.join(args.input_dir, 'parameters_{}.pkl'.format(args.nan_pct))
+with open(file_name, 'wb') as f:
+    pickle.dump(most_frequent_activity, f, protocol=2)
+    pickle.dump(first_timestamp, f, protocol=2)
+    pickle.dump(avai_instance, f, protocol=2)
+    pickle.dump(nan_instance, f, protocol=2)
+    pickle.dump(train_size, f, protocol=2)
+    pickle.dump(val_size, f, protocol=2)
+    pickle.dump(test_size, f, protocol=2)
+    pickle.dump(train_row_num, f, protocol=2)
+    pickle.dump(val_row_num, f, protocol=2)
+    pickle.dump(test_row_num, f, protocol=2)

@@ -63,8 +63,8 @@ from models import *
 
 #Define parser
 #name = 'bpi_2012'
-name = 'bpi_2013'
-#name = 'small_log'
+#name = 'bpi_2013'
+name = 'small_log'
 #name = 'large_log'
 n_pct = [0.3,0.35,0.4,0.5]
 for k in n_pct:
@@ -97,7 +97,7 @@ for k in n_pct:
 
     for count in range(10):
         print('\n')
-        print('Count : %s-%s'%(k,count))
+        print('Count : %s'%(count))
 
 
     # In[5]:

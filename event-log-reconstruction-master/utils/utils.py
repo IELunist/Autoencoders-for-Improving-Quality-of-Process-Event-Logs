@@ -46,7 +46,7 @@ def calculateCaseTimeInterval(missing_data):
         if df.loc[i, 'CaseID'] != df.loc[i-1, 'CaseID']:
             df.loc[i, 'CaseTimeInterval'] = (df.loc[i, 'CompleteTimestamp'] - current_point[df.loc[i, 'CaseID']-1]).total_seconds()
             current_point[df.loc[i, 'CaseID']] = df.loc[i, 'CompleteTimestamp']
-
+            
     return df
 
 def convert2seconds(x):
@@ -58,28 +58,27 @@ def minmaxScaler(caseid, df_case, missing_df_case):
     epsilon = 0.1
     missing_case_storage = {}
     missing_case_storage[caseid] = {}
-
+    
     temp = df_case.copy()
     missing_temp = missing_df_case.copy()
-
+    
     temp['NormalizedTime'] = temp['CumTimeInterval'].copy()
     missing_temp['NormalizedTime'] = missing_temp['CumTimeInterval'].copy()
-
+    
     min_val = temp['CumTimeInterval'].min()
     max_val = temp['CumTimeInterval'].max()
-
+    
     missing_min_val = missing_temp['CumTimeInterval'].min()
     missing_max_val = missing_temp['CumTimeInterval'].max()
     missing_case_storage[caseid]['missing_min_val'] = missing_min_val
     missing_case_storage[caseid]['missing_max_val'] = missing_max_val
-
-    np_scaled = [(x-min_val)/(max_val-min_val+epsilon) for x in temp['CumTimeInterval'].values.reshape(-1,1)]
-    temp.loc[:,'NormalizedTime'] = np_scaled
-
-
-    np_scaled = [(x-min_val)/(max_val-min_val+epsilon) for x in missing_temp['CumTimeInterval'].values.reshape(-1,1)]
-    missing_temp.loc[:,'NormalizedTime'] = np_scaled
-
+    
+    for row in range(temp.shape[0]):
+        #scale complete df
+        temp.iloc[row, temp.columns.get_loc('NormalizedTime')] = (temp.iloc[row, temp.columns.get_loc('CumTimeInterval')] - min_val)/(max_val-min_val+epsilon)
+        
+        #scale missing df
+        missing_temp.iloc[row, missing_temp.columns.get_loc('NormalizedTime')] = (missing_temp.iloc[row, missing_temp.columns.get_loc('CumTimeInterval')] - missing_min_val)/(missing_max_val-missing_min_val+epsilon)  
     return temp, missing_temp, missing_case_storage
 
 
@@ -120,11 +119,11 @@ def getMeanVar(array, idx=0):
     return mean_val, var_val
 
 def getProbability(recon_test):
-    '''This function takes 3d tensor as input and return a 3d tensor which has
+    '''This function takes 3d tensor as input and return a 3d tensor which has 
     probabilities for classes of categorical variable'''
     softmax = nn.Softmax()
     #recon_test = recon_test.cpu() #moving data from gpu to cpu for full evaluation
-
+    
     for i in range(recon_test.size(0)):
         cont_values = recon_test[i, :, 0].contiguous().view(recon_test.size(1),1) #(35,1)
         softmax_values = softmax(recon_test[i, :, 1:])
@@ -147,12 +146,12 @@ def convert2df(predicted_tensor, pad_matrix, cols, test_row_num):
     '''
     predicted_tensor = getProbability(predicted_tensor) #get probability for categorical variables
     predicted_array = predicted_tensor.data.cpu().numpy() #convert to numpy array
-
+    
     #Remove 0-padding
     temp_array = predicted_array*pad_matrix
     temp_array = temp_array.reshape(predicted_array.shape[0]*predicted_array.shape[1], predicted_array.shape[2])
     temp_array = temp_array[np.any(temp_array != 0, axis=1)]
-
+    
     #check number of row of df
     if temp_array.shape[0] == test_row_num:
         #print('Converting tensor to dataframe...')
@@ -167,10 +166,10 @@ def convert2df(predicted_tensor, pad_matrix, cols, test_row_num):
 
 def inversedMinMaxScaler(caseid, min_max_storage, recon_df_w_normalized_time_case):
     epsilon = 0.1
-
+    
     temp = recon_df_w_normalized_time_case.copy()
     temp['PredictedCumTimeInterval'] = recon_df_w_normalized_time_case['NormalizedTime'].copy()
-
+    
     #should check for nan values here
     #min_val = min_max_storage[caseid]['missing_min_val']
     #max_val = min_max_storage[caseid]['missing_max_val']
@@ -178,7 +177,7 @@ def inversedMinMaxScaler(caseid, min_max_storage, recon_df_w_normalized_time_cas
 
     for row in range(temp.shape[0]):
         temp.iloc[row, temp.columns.get_loc('PredictedCumTimeInterval')] = min_val + temp.iloc[row, temp.columns.get_loc('NormalizedTime')]*(max_val-min_val+epsilon)
-
+        
     return temp
 
 def findValidMinMax(caseid, min_max_storage):
@@ -188,7 +187,7 @@ def findValidMinMax(caseid, min_max_storage):
     max_val_after = 0
     min_val = 0
     max_val = 0
-
+    
     if caseid == len(min_max_storage):
         for i in range(caseid):
             min_val = min_max_storage[caseid-i]['missing_min_val']
@@ -201,7 +200,7 @@ def findValidMinMax(caseid, min_max_storage):
             max_val_before = min_max_storage[caseid-i]['missing_max_val']
             if not np.isnan(min_val_before) and not np.isnan(max_val_before):
                 break
-
+    
         for j in range(len(min_max_storage) - caseid+1):
             min_val_after = min_max_storage[caseid+j]['missing_min_val']
             max_val_after = min_max_storage[caseid+j]['missing_max_val']
@@ -217,7 +216,7 @@ def getDfWithTime(recon_df_w_normalized_time, missing_true_test, min_max_storage
     temp['CaseID'] = missing_true_test['CaseID'].copy()
     recon_groupByCase = temp.groupby(['CaseID'])
     recon_df_w_time = pd.DataFrame(columns=list(temp)+['PredictedCumTimeInterval'])
-
+    
     for caseid, data_case in recon_groupByCase:
         temp_case = inversedMinMaxScaler(caseid, min_max_storage, data_case)
         recon_df_w_time = recon_df_w_time.append(temp_case)
@@ -239,7 +238,7 @@ def getnanindex(missing_true_df):
 def getSubmission(recon_df_w_time, missing_true_test, complete_true_test, first_timestamp):
     temp = pd.DataFrame(columns=['CaseID', 'TrueActivity', 'PredictedActivity', 'TrueTime', 'PredictedTime'])
     temp['CaseID'] = missing_true_test['CaseID'].copy()
-
+    
     #ground truth
     temp['TrueActivity'] = complete_true_test['Activity'].copy()
     temp['TrueTime'] = complete_true_test['CumTimeInterval'].copy()
@@ -279,17 +278,17 @@ def evaluation(submission_df, nan_time_index, nan_activity_index, show=False):
     predicted_time = submission_df.loc[nan_time_index, 'PredictedTime']
     mae_time = mean_absolute_error(true_time, predicted_time)
     rmse_time = sqrt(mean_squared_error(true_time, predicted_time))
-
+    
     #eval Activity
     true_activity = submission_df.loc[nan_activity_index, 'TrueActivity']
     predicted_activity = submission_df.loc[nan_activity_index, 'PredictedActivity']
     acc = accuracy_score(true_activity, predicted_activity)
-
-    if show==True:
+    
+    if show==True: 
         print('Number of missing Time: {}'.format(len(nan_time_index)))
         print('Mean Absolute Error: {:.4f} day(s)'.format(mae_time/86400))
         print('Root Mean Squared Error: {:.4f} day(s)'.format(rmse_time/86400))
-
+        
         print('Number of missing Activity: {}'.format(len(nan_activity_index)))
         print('Accuracy: {:.2f}%'.format(acc*100))
     return mae_time, rmse_time, acc
@@ -301,22 +300,22 @@ def val(model, missing_matrix_w_normalized_time_val, complete_true_val, missing_
     model.eval()
     m_val = missing_matrix_w_normalized_time_val
     m_val = Variable(torch.Tensor(m_val).float())
-
+    
     if args.cuda:
         m_val = m_val.cuda()
-
+        
     recon_val, mu, logvar = model(m_val)
-
+    
     recon_df_w_normalized_time = convert2df(recon_val, pad_matrix_val, cols_w_normalized_time, val_row_num)
     recon_df_w_time = getDfWithTime(recon_df_w_normalized_time, missing_true_val, min_max_storage)
     submission_df = getSubmission(recon_df_w_time, missing_true_val, complete_true_val, first_timestamp)
-
+    
     #evaluate
     mae_time, rmse_time, acc = evaluation(submission_df, nan_time_index_val, nan_activity_index_val)
-
-
+    
+    
     return mae_time/86400+1/acc
-
+    
 #val_score = val(model, missing_matrix_w_normalized_time_val, complete_true_val, missing_true_val,
 #                 pad_matrix_val, cols_w_normalized_time, val_row_num,
 #                 nan_time_index_val, nan_activity_index_val)
@@ -327,21 +326,21 @@ def val(model, missing_matrix_w_normalized_time_val, complete_matrix_w_normalize
     model.eval()
     m_val = missing_matrix_w_normalized_time_val
     m_val = Variable(torch.Tensor(m_val).float())
-
+    
     c_val = complete_matrix_w_normalized_time_val
     c_val = Variable(torch.Tensor(c_val).float())
-
+    
     nan_matrix_val = Variable(torch.Tensor(nan_matrix_val).float())
-
+    
     if args.cuda:
         m_val = m_val.cuda()
         c_val = c_val.cuda()
         nan_matrix_val = nan_matrix_val.cuda()
-
+        
     recon_data, mu, logvar = model(m_val)
-
+        
     loss = loss_function(recon_data, c_val, mu, logvar, nan_matrix_val)
     return loss.data[0]/missing_matrix_w_normalized_time_val.shape[0]
-
+    
 #val_score = val(model, missing_matrix_w_normalized_time_val, complete_matrix_w_normalized_time_val, avai_matrix_val)
 '''

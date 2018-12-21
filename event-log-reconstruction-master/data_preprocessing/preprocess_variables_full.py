@@ -16,21 +16,18 @@ args_parser.add_argument('-d', '--data_dir', default='../data/', help='data dir'
 args_parser.add_argument('--nan_pct', default=0.3, type=float, help='Nan percentage')
 args_parser.add_argument('--train_pct', default=0.6, type=float, help='Train percentage')
 args_parser.add_argument('--val_pct', default=0.2, type=float, help='Validate percentage')
-
 args = args_parser.parse_args()
-print(args.name)
 args.data_file = args.name + '.csv'
 args.input_dir = '../input/{}/'.format(args.name)
 
 #name = 'bpi_2012'
 #name = 'bpi_2013'
 #name = 'Road_Traffic_Fine_Management_Process'
-
 '''
 args = {
     'data_dir': '../data/',
     'data_file': name + '.csv',
-    'input_dir': '../input/{}/'.format(name),
+    'input_dir': '../input/{}/'.format(name),  
     'nan_pct': 0.3,
     'train_pct': 0.6,
     'val_pct': 0.2,
@@ -38,7 +35,7 @@ args = {
 
 args = argparse.Namespace(**args)
 '''
-'''
+
 file_name = os.path.join(args.input_dir, 'parameters_{}.pkl'.format(args.nan_pct))
 with open(file_name, 'rb') as f:
     most_frequent_activity = pickle.load(f)
@@ -51,7 +48,7 @@ with open(file_name, 'rb') as f:
     train_row_num = pickle.load(f)
     val_row_num = pickle.load(f)
     test_row_num = pickle.load(f)
-
+    
 sys.path.insert(0, './../utils/')
 from utils import *
 
@@ -119,7 +116,7 @@ for row in range(enc_missing_df_w_time.shape[0]):
     else:
         avai_index_df.loc[row, 'CumTimeInterval'] = 1
         nan_index_df.loc[row, 'CumTimeInterval'] = 0
-
+        
 #mask for Activity
 print('Mask for Activity')
 for row in range(enc_missing_df_w_time.shape[0]):
@@ -129,7 +126,7 @@ for row in range(enc_missing_df_w_time.shape[0]):
     else:
         avai_index_df.iloc[row, 2:] = 0
         nan_index_df.iloc[row, 2:] = 1
-
+        
 pad_index_df = enc_complete_df.copy()
 cols = [x for x in list(pad_index_df) if x != 'CaseID']
 pad_index_df.loc[:, cols] = 1
@@ -183,6 +180,5 @@ with open(preprocessed_data_name, 'wb') as f:
     pickle.dump(pad_matrix, f, protocol=2)
     pickle.dump(cols_w_time, f, protocol=2)
     pickle.dump(cols_w_normalized_time, f, protocol=2)
-
+    
 print('Finish!!!')
-'''

@@ -63,10 +63,10 @@ from models import *
 
 #Define parser
 #name = 'bpi_2012'
-name = 'bpi_2013'
+#name = 'bpi_2013'
 #name = 'small_log'
-#name = 'large_log'
-n_pct = [0.3,0.35,0.4,0.5]
+name = 'large_log'
+n_pct = [0.3]
 for k in n_pct:
     print('\n')
     print('Nan_Pct_rate : %s'%(str(k)))
@@ -438,7 +438,6 @@ for k in n_pct:
 
             print('Testing...')
             mae_time, rmse_time, acc = evaluation(submission, nan_time_index_test, nan_activity_index_test,show=True)
-            result = [mae_time,rmse_time,acc]
             resultloc=args.output_dir+'result_ver%s.pkl'%(str(count))
             with open(resultloc, 'wb') as f:
                 pickle.dump(result, f, protocol=2)
@@ -449,3 +448,27 @@ for k in n_pct:
             submission_loc = args.output_dir+'submission_ver%s.csv'%(str(count))
             submission_df.to_csv(submission_loc, index=False)
             print('Done!')
+
+
+        # In[33]:
+
+
+        submission_df.head(10)
+
+
+        # In[34]:
+
+
+        submission.head(20)
+
+
+        # In[35]:
+
+
+        missing_true_test.head(20)
+
+
+        # In[36]:
+
+
+        first_timestamp
